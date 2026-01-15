@@ -6,3 +6,6 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+  [build.environment]
+  API_KEY = "AIzaSyDdoiLDVKQ1S_jMjG_WzNDZQ6_jcDDPRWw"
