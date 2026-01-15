@@ -96,8 +96,12 @@ export async function generateCurriculum(
       },
     });
 
-    const text = response.text.trim();
-    const curriculum = JSON.parse(text) as Curriculum;
+    const responseText = response.text;
+    if (!responseText) {
+      throw new Error("Model failed to generate a curriculum response. Please try again.");
+    }
+
+    const curriculum = JSON.parse(responseText.trim()) as Curriculum;
 
     // Extract grounding sources
     const sources: GroundingSource[] = [];
