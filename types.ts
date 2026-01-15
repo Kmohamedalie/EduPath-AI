@@ -9,6 +9,11 @@ export interface SkillRating {
   level: number; // 1 to 5
 }
 
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
 export interface Module {
   id: string;
   title: string;
@@ -30,6 +35,8 @@ export interface Curriculum {
   suggestedCertifications: string[];
   prerequisites: string[];
   adaptiveFocusReasoning?: string;
+  industryRelevanceScore: number; // 0 to 100
+  groundingSources?: GroundingSource[];
   timestamp?: number;
 }
 
