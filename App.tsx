@@ -505,27 +505,26 @@ const App: React.FC = () => {
                 required
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Target Specialization (e.g., Computer Vision, Product Design)"
-                className="w-full pl-6 pr-44 py-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                placeholder="Topic (e.g., Computer Vision)"
+                className="w-full pl-6 pr-16 md:pr-60 py-6 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
               />
               
               {state.isLoading ? (
                 <button
                   type="button"
                   onClick={handleStop}
-                  className="absolute right-3 top-3 bottom-3 bg-slate-800 dark:bg-slate-700 text-white px-8 rounded-xl font-black hover:bg-red-600 transition-all flex items-center gap-3 shadow-lg group"
+                  className="absolute right-3 top-3 bottom-3 bg-slate-800 dark:bg-slate-700 text-white px-4 md:px-8 rounded-xl font-black hover:bg-red-600 transition-all flex items-center gap-3 shadow-lg group"
                 >
-                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin group-hover:hidden"></div>
-                  <svg className="w-5 h-5 hidden group-hover:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
-                  <span className="group-hover:hidden">Generating...</span>
-                  <span className="hidden group-hover:block">Stop</span>
+                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span className="hidden md:block">Stop</span>
                 </button>
               ) : (
                 <button
                   type="submit"
-                  className="absolute right-3 top-3 bottom-3 bg-blue-600 text-white px-8 rounded-xl font-black hover:bg-blue-700 transition-all flex items-center gap-3 shadow-lg shadow-blue-200 dark:shadow-blue-900/40"
+                  className="absolute right-3 top-3 bottom-3 bg-blue-600 text-white px-4 md:px-8 rounded-xl font-black hover:bg-blue-700 transition-all flex items-center gap-3 shadow-lg shadow-blue-200 dark:shadow-blue-900/40"
                 >
-                  Architect Path
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  <span className="hidden md:block">Architect Path</span>
                 </button>
               )}
             </div>
@@ -595,7 +594,7 @@ const App: React.FC = () => {
                         disabled={state.isLoading}
                         value={newSkill}
                         onChange={(e) => setNewSkill(e.target.value)}
-                        placeholder="Add skill (e.g. AWS, Calculus)"
+                        placeholder="Add skill (e.g. AWS)"
                         className="flex-grow md:w-64 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 outline-none disabled:opacity-50"
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
                       />
@@ -804,7 +803,7 @@ const App: React.FC = () => {
                 </div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">EduPath AI</h3>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-sm">
+              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-sm">
                 Synthesis of world-class educational standards and industry demand for the ambitious lifelong learner.
               </p>
             </div>
