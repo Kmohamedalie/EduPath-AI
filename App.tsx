@@ -25,8 +25,13 @@ const App: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   const [savedPaths, setSavedPaths] = useState<Curriculum[]>(() => {
-    const saved = localStorage.getItem('savedPaths');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('savedPaths');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to parse saved paths:", e);
+      return [];
+    }
   });
   
   // UI States
