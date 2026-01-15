@@ -26,6 +26,8 @@ export interface Module {
   isCompleted?: boolean;
 }
 
+export type ReminderFrequency = 'Weekly' | 'Monthly' | 'Yearly' | 'None';
+
 export interface Curriculum {
   specialization: string;
   overview: string;
@@ -38,6 +40,8 @@ export interface Curriculum {
   industryRelevanceScore: number; // 0 to 100
   groundingSources?: GroundingSource[];
   timestamp?: number;
+  reminderFrequency?: ReminderFrequency;
+  lastCheckIn?: number;
 }
 
 export type ExperienceLevel = 'Beginner' | 'Professional' | 'Academic';

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GenerationState, Curriculum, SkillRating, UserProfile } from './types';
+import { GenerationState, Curriculum, SkillRating, UserProfile, ReminderFrequency } from './types';
 import { generateCurriculum } from './services/geminiService';
 import { generateDossierHtml } from './services/exportService';
 import ModuleCard from './components/ModuleCard';
@@ -16,12 +16,18 @@ const App: React.FC = () => {
   const [activeModal, setActiveModal] = useState<'docs' | 'standards' | 'terms' | 'privacy' | 'support' | 'signin' | 'profile' | 'refine' | null>(null);
   const [refineQuery, setRefineQuery] = useState('');
   
+  // Buzz System State
+  const [activeBuzz, setActiveBuzz] = useState<Curriculum | null>(null);
+
   // Persisted Login States
   const [userEmail, setUserEmail] = useState(() => localStorage.getItem('userEmail') || '');
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  const [savedPaths, setSavedPaths] = useState<Curriculum[]>([]);
+  const [savedPaths, setSavedPaths] = useState<Curriculum[]>(() => {
+    const saved = localStorage.getItem('savedPaths');
+    return saved ? JSON.parse(saved) : [];
+  });
   
   // UI States
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'system');
@@ -36,11 +42,34 @@ const App: React.FC = () => {
     curriculum: null
   });
 
-  // Persist login state
+  // Persist login and paths
   useEffect(() => {
     localStorage.setItem('isLoggedIn', isLoggedIn.toString());
     localStorage.setItem('userEmail', userEmail);
-  }, [isLoggedIn, userEmail]);
+    localStorage.setItem('savedPaths', JSON.stringify(savedPaths));
+  }, [isLoggedIn, userEmail, savedPaths]);
+
+  // Momentum Check Logic (The Buzz)
+  useEffect(() => {
+    if (savedPaths.length > 0) {
+      const now = Date.now();
+      const dueCheck = savedPaths.find(path => {
+        if (!path.reminderFrequency || path.reminderFrequency === 'None') return false;
+        const last = path.lastCheckIn || path.timestamp || now;
+        const intervals: Record<string, number> = {
+          'Weekly': 7 * 24 * 60 * 60 * 1000,
+          'Monthly': 30 * 24 * 60 * 60 * 1000,
+          'Yearly': 365 * 24 * 60 * 60 * 1000
+        };
+        const interval = intervals[path.reminderFrequency];
+        return interval !== undefined && (now - last) >= interval;
+      });
+
+      if (dueCheck && !activeBuzz) {
+        setActiveBuzz(dueCheck);
+      }
+    }
+  }, [savedPaths, activeBuzz]);
 
   // Handle Theme Logic
   useEffect(() => {
@@ -120,6 +149,25 @@ const App: React.FC = () => {
     }));
   };
 
+  const updateReminder = (pathIndex: number, frequency: ReminderFrequency) => {
+    const newPaths = [...savedPaths];
+    newPaths[pathIndex] = { 
+      ...newPaths[pathIndex], 
+      reminderFrequency: frequency,
+      lastCheckIn: Date.now() 
+    };
+    setSavedPaths(newPaths);
+  };
+
+  const acknowledgeBuzz = (path: Curriculum) => {
+    const idx = savedPaths.findIndex(p => p.specialization === path.specialization && p.timestamp === path.timestamp);
+    if (idx !== -1) {
+      updateReminder(idx, path.reminderFrequency || 'None');
+    }
+    loadSavedPath(path);
+    setActiveBuzz(null);
+  };
+
   const addSkill = () => {
     if (newSkill.trim()) {
       setAssessment([...assessment, { skill: newSkill, level: 3 }]);
@@ -173,7 +221,12 @@ const App: React.FC = () => {
         return;
       }
 
-      const pathWithMeta = { ...state.curriculum, timestamp: Date.now() };
+      // Explicitly define type of pathWithMeta to Curriculum and cast 'None' to ReminderFrequency to avoid string widening
+      const pathWithMeta: Curriculum = { 
+        ...state.curriculum, 
+        timestamp: Date.now(), 
+        reminderFrequency: 'None' as ReminderFrequency 
+      };
       setSavedPaths([pathWithMeta, ...savedPaths]);
       alert('Curriculum saved to your profile!');
     }
@@ -196,6 +249,7 @@ const App: React.FC = () => {
   };
 
   const calculateProgress = (curr: Curriculum) => {
+    if (!curr.modules || curr.modules.length === 0) return 0;
     const completed = curr.modules.filter(m => m.isCompleted).length;
     return Math.round((completed / curr.modules.length) * 100);
   };
@@ -218,8 +272,29 @@ const App: React.FC = () => {
     </div>
   );
 
+  const currentProgress = state.curriculum ? calculateProgress(state.curriculum) : 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      
+      {/* Buzz Alert Toast */}
+      {activeBuzz && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[150] w-[90%] max-w-md animate-in slide-in-from-top-12 duration-500">
+          <div className="bg-blue-600 text-white p-6 rounded-[2rem] shadow-2xl flex items-center gap-5 border-4 border-white dark:border-slate-900">
+            <div className="bg-white/20 p-3 rounded-full animate-bounce">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+            </div>
+            <div className="flex-grow">
+              <h4 className="font-black text-lg">Check-in Buzz!</h4>
+              <p className="text-sm font-medium text-blue-50 opacity-90">Time to review your progress in {activeBuzz.specialization}.</p>
+            </div>
+            <button onClick={() => acknowledgeBuzz(activeBuzz)} className="bg-white text-blue-600 px-5 py-2.5 rounded-xl font-black text-xs hover:scale-105 transition-transform active:scale-95 shadow-lg">
+              Open
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Universal Modal Container */}
       {activeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md">
@@ -244,6 +319,23 @@ const App: React.FC = () => {
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+              {activeModal === 'docs' && (
+                <div className="space-y-6 text-slate-600 dark:text-slate-400">
+                  <section>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">Architecting Your Path</h3>
+                    <p className="text-sm leading-relaxed">EduPath AI utilizes the latest Gemini 3 series models to synthesize academic frameworks and industry demands. By leveraging real-time Google Search grounding, the system ensures that every module matches 2024/2025 technological shifts.</p>
+                  </section>
+                  <section>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">Learning Momentum</h3>
+                    <p className="text-sm leading-relaxed">Once you save a curriculum, you can enable "Buzzers" to receive weekly, monthly, or yearly check-ins. This helps you maintain long-term learning consistency.</p>
+                  </section>
+                  <section>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">Exporting Dossiers</h3>
+                    <p className="text-sm leading-relaxed">Use the "Export Dossier" feature to generate a professional PDF-ready overview of your specialization, including standard alignments and architectural reasoning.</p>
+                  </section>
+                </div>
+              )}
+
               {activeModal === 'refine' && (
                 <div className="space-y-6">
                   <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Instruct the architect on how to modify the current curriculum. Your previous assessment and focus remain in context.</p>
@@ -294,7 +386,7 @@ const App: React.FC = () => {
                 <div className="space-y-6 text-slate-600 dark:text-slate-400">
                   <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 text-center">
                     <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Need Assistance?</h3>
-                    <p className="text-sm mb-6">Our research lab is available for custom roadmap inquiries.</p>
+                    <p className="text-sm mb-6">Our research lab is available for custom roadmap inquiries or platform support.</p>
                     <a href="mailto:support@edupath-ai.edu" className="block w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all">
                       Email Support Lab
                     </a>
@@ -304,15 +396,21 @@ const App: React.FC = () => {
 
               {activeModal === 'terms' && (
                 <div className="space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  <p>By using EduPath AI, you acknowledge that all generated curricula are synthesized by AI and should be verified by a professional.</p>
-                  <p>EduPath AI does not guarantee employment or academic credit. The platform provides guidance based on public standards.</p>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">1. Service Usage</h3>
+                  <p>By using EduPath AI, you acknowledge that all generated curricula are synthesized by AI and should be verified by a professional educator or industry expert.</p>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">2. No Guarantee</h3>
+                  <p>EduPath AI does not guarantee employment or academic credit. The platform provides guidance based on publicly available standards and trends.</p>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">3. Data Retention</h3>
+                  <p>User data is stored primarily in local storage. EduPath AI does not sell or share individual architectural plans with third parties.</p>
                 </div>
               )}
 
               {activeModal === 'privacy' && (
                 <div className="space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  <p>EduPath AI prioritizes user privacy. We primarily utilize LocalStorage to store your data locally on your device.</p>
-                  <p>Your email is used solely as a unique identifier for synchronization.</p>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">1. Information Collection</h3>
+                  <p>EduPath AI prioritizes user privacy. We primarily utilize LocalStorage to store your data locally on your device. We only collect the email address you provide for account synchronization.</p>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">2. Data Security</h3>
+                  <p>All communication with the Gemini API is encrypted. Your architectural roadmaps are kept private unless you explicitly choose to share or export them.</p>
                 </div>
               )}
 
@@ -353,7 +451,10 @@ const App: React.FC = () => {
                   </section>
 
                   <section>
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4">Saved Roadmaps</h4>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Learning Momentum</h4>
+                      <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-black uppercase">Active Check-ins</span>
+                    </div>
                     {savedPaths.length > 0 ? (
                       <div className="space-y-4">
                         {savedPaths.map((path, i) => {
@@ -361,28 +462,54 @@ const App: React.FC = () => {
                           return (
                             <div key={i} className="p-5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl group hover:border-blue-200 transition-all shadow-sm">
                               <div className="flex items-start justify-between mb-4">
-                                <div>
+                                <div className="flex-grow pr-4">
                                   <p className="font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{path.specialization}</p>
-                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                    Generated {new Date(path.timestamp || 0).toLocaleDateString()}
-                                  </p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                      Progress: {progress}%
+                                    </span>
+                                  </div>
                                 </div>
-                                <span className="text-xs font-black px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                  {progress}% Complete
-                                </span>
+                                <div className="flex flex-col items-end gap-2">
+                                  <select 
+                                    value={path.reminderFrequency || 'None'} 
+                                    onChange={(e) => updateReminder(i, e.target.value as ReminderFrequency)}
+                                    className="text-[10px] font-black uppercase bg-slate-50 dark:bg-slate-700 px-2 py-1 rounded-lg outline-none text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-600"
+                                  >
+                                    <option value="None">No Buzz</option>
+                                    <option value="Weekly">Weekly Buzz</option>
+                                    <option value="Monthly">Monthly Buzz</option>
+                                    <option value="Yearly">Yearly Buzz</option>
+                                  </select>
+                                  {path.reminderFrequency !== 'None' && (
+                                    <span className="text-[8px] font-black text-slate-400 uppercase">Buzzer Active</span>
+                                  )}
+                                </div>
                               </div>
-                              <button 
-                                onClick={() => loadSavedPath(path)}
-                                className="w-full py-2.5 bg-slate-50 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 hover:text-white rounded-xl text-xs font-black transition-all"
-                              >
-                                View Roadmap
-                              </button>
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => loadSavedPath(path)}
+                                  className="flex-grow py-2.5 bg-slate-50 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 hover:text-white rounded-xl text-xs font-black transition-all"
+                                >
+                                  View Path
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    const next = [...savedPaths];
+                                    next.splice(i, 1);
+                                    setSavedPaths(next);
+                                  }}
+                                  className="px-4 py-2.5 bg-red-50 dark:bg-red-900/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-400">No saved roadmaps yet.</p>
+                      <p className="text-sm text-slate-400 py-10 text-center bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 font-medium">No saved roadmaps yet. Create one above to start your momentum.</p>
                     )}
                   </section>
                 </div>
@@ -423,14 +550,23 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {state.curriculum && (
+              <div className="hidden lg:flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-800/50 animate-in fade-in zoom-in-95 duration-500">
+                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Mastery</span>
+                <span className="text-sm font-black text-slate-900 dark:text-white">{currentProgress}%</span>
+              </div>
+            )}
             <div className="hidden md:flex gap-6 text-sm font-bold text-slate-500 dark:text-slate-400">
               <button onClick={() => setActiveModal('docs')} className="hover:text-blue-600 transition-colors">Docs</button>
               <button onClick={() => setActiveModal('standards')} className="hover:text-blue-600 transition-colors">Library</button>
             </div>
             <ThemeToggle />
             {isLoggedIn ? (
-              <button onClick={() => setActiveModal('profile')} className="hidden md:flex w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 items-center justify-center text-blue-700 dark:text-blue-400 font-black hover:scale-105 transition-transform">
+              <button onClick={() => setActiveModal('profile')} className="hidden md:flex w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 items-center justify-center text-blue-700 dark:text-blue-400 font-black hover:scale-105 transition-transform relative">
                 {userEmail.charAt(0).toUpperCase()}
+                {savedPaths.some(p => p.reminderFrequency !== 'None') && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse"></span>
+                )}
               </button>
             ) : (
               <button onClick={() => setActiveModal('signin')} className="hidden md:block bg-slate-900 dark:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:brightness-110 active:scale-95 transition-all">Sign In</button>
@@ -447,6 +583,16 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
+        
+        {/* Dynamic Progress Line */}
+        {state.curriculum && (
+          <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-100 dark:bg-slate-900 overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-700 ease-out shadow-[0_0_8px_rgba(37,99,235,0.5)]"
+              style={{ width: `${currentProgress}%` }}
+            ></div>
+          </div>
+        )}
       </header>
 
       {/* Mobile Menu Drawer */}
