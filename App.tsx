@@ -858,7 +858,7 @@ const App: React.FC = () => {
           </div>
           <div className="border-t border-slate-100 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
-              © 2024 EduPath AI Research Lab. Powered by Gemini.
+              © 2026 EduPath AI Research Lab. Powered by Gemini.
             </p>
             <div className="flex gap-6">
               {['GitHub', 'LinkedIn'].map(p => (
