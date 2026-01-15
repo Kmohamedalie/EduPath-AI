@@ -1,8 +1,14 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Curriculum, SkillRating, GroundingSource } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy-initialized AI client to prevent build-time errors if API_KEY is temporarily unavailable
+const getAIClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === 'undefined') {
+    throw new Error("API Key is missing. Please configure the API_KEY environment variable in Netlify.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 const curriculumSchema = {
   type: Type.OBJECT,
@@ -63,6 +69,8 @@ export async function generateCurriculum(
   refinementPrompt?: string,
   existingCurriculum?: Curriculum | null
 ): Promise<Curriculum> {
+  const ai = getAIClient();
+  
   const assessmentText = assessment.length > 0 
     ? `USER SKILLS: ${assessment.map(s => `${s.skill}: ${s.level}/5`).join(', ')}`
     : "No assessment provided.";
@@ -96,9 +104,10 @@ export async function generateCurriculum(
       },
     });
 
+    // Guard against undefined text to satisfy TypeScript and prevent runtime crashes
     const responseText = response.text;
     if (!responseText) {
-      throw new Error("Model failed to generate a curriculum response. Please try again.");
+      throw new Error("The AI architect encountered a calculation error. Please refine your query and try again.");
     }
 
     const curriculum = JSON.parse(responseText.trim()) as Curriculum;
@@ -123,6 +132,9 @@ export async function generateCurriculum(
     };
   } catch (error) {
     console.error("Error generating curriculum:", error);
-    throw new Error("Architecture synthesis failed. Please try a different topic or refine your parameters.");
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Architecture synthesis failed. Please check your connection or try a different topic.");
   }
 }
