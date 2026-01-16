@@ -226,7 +226,6 @@ const App: React.FC = () => {
         return;
       }
 
-      // Explicitly define type of pathWithMeta to Curriculum and cast 'None' to ReminderFrequency to avoid string widening
       const pathWithMeta: Curriculum = { 
         ...state.curriculum, 
         timestamp: Date.now(), 
@@ -565,7 +564,9 @@ const App: React.FC = () => {
               <button onClick={() => setActiveModal('docs')} className="hover:text-blue-600 transition-colors">Docs</button>
               <button onClick={() => setActiveModal('standards')} className="hover:text-blue-600 transition-colors">Library</button>
             </div>
-            <ThemeToggle />
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
             {isLoggedIn ? (
               <button onClick={() => setActiveModal('profile')} className="hidden md:flex w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 items-center justify-center text-blue-700 dark:text-blue-400 font-black hover:scale-105 transition-transform relative">
                 {userEmail.charAt(0).toUpperCase()}
@@ -604,6 +605,10 @@ const App: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-x-0 top-[73px] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-[45] animate-in slide-in-from-top duration-300 shadow-2xl p-6 flex flex-col gap-6">
           <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between py-2">
+              <span className="font-bold text-slate-700 dark:text-slate-300">Theme</span>
+              <ThemeToggle />
+            </div>
             <button onClick={() => { setActiveModal('docs'); setIsMobileMenuOpen(false); }} className="text-left font-bold text-slate-700 dark:text-slate-300 py-2">Documentation</button>
             <button onClick={() => { setActiveModal('standards'); setIsMobileMenuOpen(false); }} className="text-left font-bold text-slate-700 dark:text-slate-300 py-2">Standards Library</button>
             <button onClick={() => { setActiveModal('support'); setIsMobileMenuOpen(false); }} className="text-left font-bold text-slate-700 dark:text-slate-300 py-2">Contact Support</button>
@@ -858,7 +863,7 @@ const App: React.FC = () => {
           </div>
           <div className="border-t border-slate-100 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
-              © 2026 EduPath AI Research Lab. Powered by Gemini.
+              © 2024 EduPath AI Research Lab. Powered by Gemini.
             </p>
             <div className="flex gap-6">
               {['GitHub', 'LinkedIn'].map(p => (
