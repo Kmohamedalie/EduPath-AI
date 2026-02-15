@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GenerationState, Curriculum, SkillRating, UserProfile, ReminderFrequency } from './types';
+import { GenerationState, Curriculum, SkillRating, ReminderFrequency } from './types';
 import { generateCurriculum } from './services/geminiService';
 import { generateDossierHtml } from './services/exportService';
 import ModuleCard from './components/ModuleCard';
@@ -7,11 +7,20 @@ import ModuleCard from './components/ModuleCard';
 type Theme = 'light' | 'dark' | 'system';
 
 const App: React.FC = () => {
-  const [query, setQuery] = useState('');
-  const [focus, setFocus] = useState<'Industry' | 'Academic' | 'Balanced'>('Balanced');
-  const [experience, setExperience] = useState('Beginner');
-  const [showAssessment, setShowAssessment] = useState(false);
-  const [assessment, setAssessment] = useState<SkillRating[]>([]);
+  // Input State Persistence
+  const [query, setQuery] = useState(() => localStorage.getItem('lastQuery') || '');
+  const [focus, setFocus] = useState<'Industry' | 'Academic' | 'Balanced'>(() => 
+    (localStorage.getItem('lastFocus') as any) || 'Balanced'
+  );
+  const [experience, setExperience] = useState(() => localStorage.getItem('lastExperience') || 'Beginner');
+  const [assessment, setAssessment] = useState<SkillRating[]>(() => {
+    try {
+      const saved = localStorage.getItem('lastAssessment');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const [showAssessment, setShowAssessment] = useState(assessment.length > 0);
   const [newSkill, setNewSkill] = useState('');
   const [activeModal, setActiveModal] = useState<'docs' | 'standards' | 'terms' | 'privacy' | 'support' | 'signin' | 'profile' | 'refine' | null>(null);
   const [refineQuery, setRefineQuery] = useState('');
@@ -41,18 +50,36 @@ const App: React.FC = () => {
   // Ref to track the current request to allow for cancellation logic
   const activeRequestId = useRef<number>(0);
 
-  const [state, setState] = useState<GenerationState>({
-    isLoading: false,
-    error: null,
-    curriculum: null
+  const [state, setState] = useState<GenerationState>(() => {
+    try {
+      const cached = localStorage.getItem('activeWorkspaceCurriculum');
+      return {
+        isLoading: false,
+        error: null,
+        curriculum: cached ? JSON.parse(cached) : null
+      };
+    } catch {
+      return { isLoading: false, error: null, curriculum: null };
+    }
   });
 
-  // Persist login and paths
+  // Persist session inputs
+  useEffect(() => {
+    localStorage.setItem('lastQuery', query);
+    localStorage.setItem('lastFocus', focus);
+    localStorage.setItem('lastExperience', experience);
+    localStorage.setItem('lastAssessment', JSON.stringify(assessment));
+  }, [query, focus, experience, assessment]);
+
+  // Persist current workspace curriculum and login state
   useEffect(() => {
     localStorage.setItem('isLoggedIn', isLoggedIn.toString());
     localStorage.setItem('userEmail', userEmail);
     localStorage.setItem('savedPaths', JSON.stringify(savedPaths));
-  }, [isLoggedIn, userEmail, savedPaths]);
+    if (state.curriculum) {
+      localStorage.setItem('activeWorkspaceCurriculum', JSON.stringify(state.curriculum));
+    }
+  }, [isLoggedIn, userEmail, savedPaths, state.curriculum]);
 
   // Momentum Check Logic (The Buzz)
   useEffect(() => {
