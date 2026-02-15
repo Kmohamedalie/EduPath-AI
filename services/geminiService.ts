@@ -5,7 +5,7 @@ import { Curriculum, SkillRating, GroundingSource } from "../types";
 const getAIClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey || apiKey === 'undefined') {
-    throw new Error("API Key is missing. Please configure the API_KEY environment variable in Netlify.");
+    throw new Error("API Key is missing. Please configure the API_KEY environment variable.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -104,7 +104,6 @@ export async function generateCurriculum(
       },
     });
 
-    // Guard against undefined text to satisfy TypeScript and prevent runtime crashes
     const responseText = response.text;
     if (!responseText) {
       throw new Error("The AI architect encountered a calculation error. Please refine your query and try again.");
@@ -112,7 +111,6 @@ export async function generateCurriculum(
 
     const curriculum = JSON.parse(responseText.trim()) as Curriculum;
 
-    // Extract grounding sources
     const sources: GroundingSource[] = [];
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     if (chunks) {

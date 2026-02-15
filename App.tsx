@@ -50,7 +50,7 @@ const App: React.FC = () => {
   // Ref to track the current request to allow for cancellation logic
   const activeRequestId = useRef<number>(0);
 
-  // Persistence Layer: Cache active curriculum
+  // Persistence Layer: Cache active curriculum workspace
   const [state, setState] = useState<GenerationState>(() => {
     try {
       const cached = localStorage.getItem('edupath_active_curriculum');
@@ -64,7 +64,7 @@ const App: React.FC = () => {
     }
   });
 
-  // Effect: Persist workspace inputs
+  // Effect: Persist workspace input values
   useEffect(() => {
     localStorage.setItem('edupath_query', query);
     localStorage.setItem('edupath_focus', focus);
@@ -72,14 +72,14 @@ const App: React.FC = () => {
     localStorage.setItem('edupath_assessment', JSON.stringify(assessment));
   }, [query, focus, experience, assessment]);
 
-  // Effect: Persist curriculum and progress
+  // Effect: Persist active curriculum state (including covered module progress)
   useEffect(() => {
     if (state.curriculum) {
       localStorage.setItem('edupath_active_curriculum', JSON.stringify(state.curriculum));
     }
   }, [state.curriculum]);
 
-  // Effect: Persist user profile and paths
+  // Effect: Persist user profile and library
   useEffect(() => {
     localStorage.setItem('isLoggedIn', isLoggedIn.toString());
     localStorage.setItem('userEmail', userEmail);
