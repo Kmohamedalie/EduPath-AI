@@ -7,15 +7,15 @@ import ModuleCard from './components/ModuleCard';
 type Theme = 'light' | 'dark' | 'system';
 
 const App: React.FC = () => {
-  // Input State Persistence
-  const [query, setQuery] = useState(() => localStorage.getItem('lastQuery') || '');
+  // Persistence Layer: Load state from localStorage on init
+  const [query, setQuery] = useState(() => localStorage.getItem('edupath_query') || '');
   const [focus, setFocus] = useState<'Industry' | 'Academic' | 'Balanced'>(() => 
-    (localStorage.getItem('lastFocus') as any) || 'Balanced'
+    (localStorage.getItem('edupath_focus') as any) || 'Balanced'
   );
-  const [experience, setExperience] = useState(() => localStorage.getItem('lastExperience') || 'Beginner');
+  const [experience, setExperience] = useState(() => localStorage.getItem('edupath_experience') || 'Beginner');
   const [assessment, setAssessment] = useState<SkillRating[]>(() => {
     try {
-      const saved = localStorage.getItem('lastAssessment');
+      const saved = localStorage.getItem('edupath_assessment');
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
@@ -50,9 +50,10 @@ const App: React.FC = () => {
   // Ref to track the current request to allow for cancellation logic
   const activeRequestId = useRef<number>(0);
 
+  // Persistence Layer: Cache active curriculum
   const [state, setState] = useState<GenerationState>(() => {
     try {
-      const cached = localStorage.getItem('activeWorkspaceCurriculum');
+      const cached = localStorage.getItem('edupath_active_curriculum');
       return {
         isLoading: false,
         error: null,
@@ -63,23 +64,27 @@ const App: React.FC = () => {
     }
   });
 
-  // Persist session inputs
+  // Effect: Persist workspace inputs
   useEffect(() => {
-    localStorage.setItem('lastQuery', query);
-    localStorage.setItem('lastFocus', focus);
-    localStorage.setItem('lastExperience', experience);
-    localStorage.setItem('lastAssessment', JSON.stringify(assessment));
+    localStorage.setItem('edupath_query', query);
+    localStorage.setItem('edupath_focus', focus);
+    localStorage.setItem('edupath_experience', experience);
+    localStorage.setItem('edupath_assessment', JSON.stringify(assessment));
   }, [query, focus, experience, assessment]);
 
-  // Persist current workspace curriculum and login state
+  // Effect: Persist curriculum and progress
+  useEffect(() => {
+    if (state.curriculum) {
+      localStorage.setItem('edupath_active_curriculum', JSON.stringify(state.curriculum));
+    }
+  }, [state.curriculum]);
+
+  // Effect: Persist user profile and paths
   useEffect(() => {
     localStorage.setItem('isLoggedIn', isLoggedIn.toString());
     localStorage.setItem('userEmail', userEmail);
     localStorage.setItem('savedPaths', JSON.stringify(savedPaths));
-    if (state.curriculum) {
-      localStorage.setItem('activeWorkspaceCurriculum', JSON.stringify(state.curriculum));
-    }
-  }, [isLoggedIn, userEmail, savedPaths, state.curriculum]);
+  }, [isLoggedIn, userEmail, savedPaths]);
 
   // Momentum Check Logic (The Buzz)
   useEffect(() => {
