@@ -13,6 +13,9 @@ View app in AI Studio: https://ai.studio/apps/drive/1DFCya1pSVPU6RmQNPkDhr1ndulu
 
 <br>
 
+
+**Curriculum output:** [Sample curriculum](https://github.com/Kmohamedalie/EduPath-AI/blob/main/Profession%20Curriculum%20for%20Photography.pdf)
+
 Demo:
 
 
@@ -24,4 +27,8 @@ Responsiveness:
 
 
 https://github.com/user-attachments/assets/9d061b3e-a46b-44a3-ba30-4db0fc3918d8
+
+
+
+
 
